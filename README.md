@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Opus 4.8 Lab
 
-## Getting Started
+An interactive, colourful workshop companion for **Claude Opus 4.8**, built with Next.js 16.
 
-First, run the development server:
+- **Learn side**: concept cards, infographic flows, key stats and takeaways for all 8 modules
+- **Practice side**: step-by-step hands-on labs with progress tracking, runnable Python (Anthropic SDK, pandas, Streamlit), industry use cases and quizzes
+- **Capstone project**: the Business Analysis & Coding Assistant, with an architecture infographic and an exercise timeline
+- **AI Coach**: an agentic **LangGraph** workflow running on **Groq** with **bring-your-own-key**
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Click **Add Groq key** (top right) and paste a key from https://console.groq.com/keys.
+The key is kept in your browser's localStorage and sent per request to `/api/agent`. The server never stores or logs it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Agent workflow (`src/lib/agent/`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+START → Router ─→ Retriever ─┬─(needs tools)→ Tool Agent ─┐
+                             └─(direct)──────────────────→ Specialist → Reviewer ─(pass)→ END
+                                                              ↑            │
+                                                              └─(revise ×1)┘
+```
 
-## Learn More
+| Node | Job |
+|---|---|
+| Router | LLM classifies intent (concept · handson · usecase · code · quiz) and whether tools are needed |
+| Retriever | Keyword RAG over the workshop syllabus (`knowledge.ts`) |
+| Tool Agent | Function-calling loop: `calculator`, `estimate_claude_cost`, `kpi_growth`, `lookup_workshop_module` |
+| Specialist | The persona chosen by intent writes a grounded markdown answer that cites modules |
+| Reviewer | LLM-as-judge scores grounding and correctness, and can send the answer back for one revision |
 
-To learn more about Next.js, take a look at the following resources:
+Node events stream to the browser over SSE, and the React Flow graph lights up live.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Test
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npx tsx scripts/test-agent.ts   # offline graph test with a scripted fake LLM (no key needed)
+npm run build
+```
